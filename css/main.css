@@ -1,0 +1,1101 @@
+/**
+ * Chinese Speech to Text - メインスタイル
+ * Bootstrap 5をベースにカスタムスタイルを追加
+ */
+
+/* ===== カスタムCSS変数 ===== */
+:root {
+  /* アプリ固有色 */
+  --chinese-bg: #f8f9fa;
+  --pinyin-color: #6c757d;
+  --translation-bg: #d1ecf1;
+  --recognition-active: #28a745;
+  --recognition-error: #dc3545;
+  
+  /* 中国語フォント */
+  --chinese-font: "SimSun", "NSimSun", "Microsoft YaHei", "PMingLiU", "MingLiU", monospace;
+  --japanese-font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+  --pinyin-font: "Arial", "Helvetica", "Liberation Sans", monospace;
+}
+
+/* ===== 基本設定 ===== */
+body {
+  font-family: var(--japanese-font);
+  background-color: #ffffff;
+  min-height: 100vh;
+}
+
+/* ===== アプリケーション全体 ===== */
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== ヘッダーエリア ===== */
+header {
+  flex-shrink: 0;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6;
+  padding: 1rem 0;
+}
+
+/* ===== メインコンテンツエリア ===== */
+main {
+  flex: 1;
+  padding: 1rem;
+  overflow: hidden;
+  min-height: 0; /* flexboxの縮小を可能にする */
+}
+
+.main-text-area {
+  min-height: 200px; /* 最小高さを設定 */
+  overflow-y: auto;
+  background-color: var(--chinese-bg);
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-family: var(--chinese-font);
+  line-height: 1.8;
+  
+  /* スクロールバーのスタイリング */
+  scrollbar-width: thin;
+  scrollbar-color: #6c757d #f8f9fa;
+}
+
+/* ===== 繁体字選択時の注意文表示エリア ===== */
+/* 繁体字選択時の注意文表示の高さ調整はJavaScriptで動的に処理 */
+#taiwan-pinyin-notice {
+  transition: all 0.3s ease;
+}
+
+.main-text-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-text-area::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.main-text-area::-webkit-scrollbar-thumb {
+  background: #6c757d;
+  border-radius: 4px;
+}
+
+.main-text-area::-webkit-scrollbar-thumb:hover {
+  background: #495057;
+}
+
+/* ===== 中国語テキスト表示 ===== */
+.text-line {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  background-color: #ffffff;
+  border-radius: 0.25rem;
+  border-left: 3px solid #28a745;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* 時刻表示部分を選択不可にする */
+.text-line small.text-muted {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 認識中の中間結果 */
+.text-line.interim-text {
+  border-left-color: #007bff;
+  background-color: #f8f9ff;
+}
+
+/* 認識完了時のアニメーション */
+.text-line.completed {
+  animation: completedFadeIn 0.3s ease;
+}
+
+@keyframes completedFadeIn {
+  from {
+    border-left-color: #007bff;
+    background-color: #f8f9ff;
+  }
+  to {
+    border-left-color: #28a745;
+    background-color: #ffffff;
+  }
+}
+
+[data-theme="dark"] .text-line.completed {
+  animation: completedFadeInDark 0.3s ease;
+}
+
+@keyframes completedFadeInDark {
+  from {
+    border-left-color: #0d6efd;
+    background-color: #2a2d3a;
+  }
+  to {
+    border-left-color: #28a745;
+    background-color: #495057;
+  }
+}
+
+.text-line:hover {
+  background-color: #f1f3f4;
+}
+
+.chinese-text {
+  font-size: 20px;
+  font-family: var(--chinese-font);
+  line-height: 2.5;
+  user-select: text;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* パネル内翻訳表示時のスタイル */
+.chinese-text[data-panel-state="translation"] {
+  font-family: var(--japanese-font);
+  font-style: italic;
+}
+
+/* エラーテキストのスタイル */
+.chinese-text[data-panel-state="error"] .error-text {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ローディング時のスタイル */
+.chinese-text[data-panel-state="loading"] {
+  font-style: italic;
+}
+
+/* ホバー効果 */
+.chinese-text:hover {
+  background-color: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+/* ダークモード対応 - 中国語テキストのホバー効果 */
+[data-theme="dark"] .chinese-text:hover {
+  background-color: #616161;
+}
+
+/* ===== 翻訳エリアのスタイル ===== */
+#translation-display .text-line {
+  /* 基本スタイルはJavaScriptで動的に設定 */
+}
+
+#translation-display .text-line:hover {
+  background-color: #f8f9fa;
+}
+
+#translation-display .text-line:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* ボーダー色はJavaScriptのインラインスタイルで設定 */
+
+#translation-display .translation-text-content {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-top: 4px;
+  font-family: var(--chinese-font);
+  display: block !important;
+  width: 100% !important;
+}
+
+#translation-display .text-line[data-translation-item="translated"] .translation-text-content {
+  font-family: var(--japanese-font);
+  font-style: italic;
+}
+
+#translation-display small.text-muted {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+/* ダークモード対応 */
+[data-theme="dark"] #translation-display .text-line {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+}
+
+[data-theme="dark"] #translation-display .text-line:hover {
+  background-color: #6c757d !important;
+}
+
+[data-theme="dark"] #translation-display .text-line[data-translation-item="original"] {
+  border-left-color: #28a745 !important;
+  border-bottom-color: #6c757d !important;
+}
+
+[data-theme="dark"] #translation-display .text-line[data-translation-item="translated"] {
+  border-left-color: #007bff !important;
+}
+
+[data-theme="dark"] #translation-display .text-line[data-translation-state="loading"] {
+  border-left-color: #6c757d !important;
+}
+
+[data-theme="dark"] #translation-display .text-line[data-translation-state="error"] {
+  border-left-color: #e91e63 !important;
+}
+
+/* 翻訳コンテンツコンテナ */
+#translation-display .translation-content {
+  display: block;
+}
+
+#translation-display .translation-content .text-line {
+  width: 100%;
+  clear: both;
+  display: block !important;
+  margin-bottom: 12px !important;
+}
+
+#translation-display .translation-content .text-line:last-child {
+  margin-bottom: 0 !important;
+}
+
+
+
+/* ===== 翻訳エリアのスタイル =====
+ * 翻訳結果表示エリアの基本レイアウト（詳細はJavaScriptで動的に適用） */
+
+
+/* ===== ルビタグ（ピンイン表記）スタイリング =====
+ * 中国語漢字の上にピンインを表示するHTML rubyタグのスタイル定義
+ * 簡体字・繁体字両方に対応 */
+.chinese-ruby {
+  font-family: var(--chinese-font);
+  font-size: 20px;
+  line-height: 2.5;
+  display: inline-block;
+  text-align: center;
+  margin: 0 1px;
+  position: relative;
+}
+
+.chinese-ruby rt {
+  font-family: var(--pinyin-font);
+  font-size: 12px;
+  color: var(--pinyin-color);
+  font-weight: 400;
+  line-height: 1;
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* テキスト選択時のハイライト色設定 */
+.chinese-text::selection {
+  background-color: #007bff;
+  color: white;
+}
+
+.chinese-ruby::selection {
+  background-color: #007bff;
+  color: white;
+}
+
+/* ===== 音声認識コントロールボタン =====
+ * メインの音声認識開始・停止ボタンのスタイリングとアニメーション
+ * パルス効果とエラー時のシェイクアニメーション */
+#recognition-btn {
+  min-width: 130px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+#recognition-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 音声認識中のパルスアニメーション効果 */
+#recognition-btn.btn-success {
+  animation: pulse-success 2s infinite;
+}
+
+@keyframes pulse-success {
+  0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+/* 音声認識エラー時のシェイクアニメーション */
+#recognition-btn.btn-danger {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 20%, 40%, 60%, 80% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+}
+
+/* ===== 言語選択コントロール =====
+ * zh-CN（簡体字）とzh-TW（繁体字）の切り替えボタングループ
+ * 音声認識の対象言語を選択 */
+.btn-group .btn-check:checked + .btn-outline-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+/* ===== 翻訳パネルエリア =====
+ * フッターに配置された翻訳結果表示エリアのスタイリング
+ * プレースホルダー、アラート、再翻訳機能を含む */
+.translation-area {
+  background-color: var(--translation-bg);
+  min-height: 120px;
+  border-radius: 0.5rem;
+}
+
+.translation-placeholder {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+.translation-content .alert {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+}
+
+.translation-content .alert-info {
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
+}
+
+/* 翻訳結果エリア内の原文テキストをクリック可能にして再翻訳機能を提供 */
+.translation-content .selected-text {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: 2px 4px;
+  border-radius: 3px;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  pointer-events: auto;
+  display: inline-block;
+}
+
+.translation-content .selected-text:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.translation-content .alert-success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+/* ===== フッターエリア ===== */
+footer {
+  flex-shrink: 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  max-height: 35vh; /* 最大高さを少し増やす */
+  min-height: auto; /* 内容に合わせて高さを調整 */
+  overflow-y: auto;
+}
+
+/* 翻訳エリアの高さ制限 */
+#translation-display {
+  max-height: 100%; /* footer内での制限に任せる */
+  height: auto; /* 内容に合わせて高さを調整 */
+}
+
+#translation-display .card-body {
+  max-height: 25vh; /* 翻訳内容の最大高さ */
+  overflow-y: auto;
+}
+
+/* 翻訳結果のスクロールバー */
+#translation-display .card-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+#translation-display .card-body::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 3px;
+}
+
+#translation-display .card-body::-webkit-scrollbar-thumb {
+  background: #6c757d;
+  border-radius: 3px;
+}
+
+#translation-display .card-body::-webkit-scrollbar-thumb:hover {
+  background: #495057;
+}
+
+/* ===== パネル切り替えエリア ===== */
+.panel-container {
+  display: flex;
+  align-items: center;
+  margin-right: 72px;
+}
+
+.panel-container .chinese-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-area {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 0 0.25rem 0.25rem 0;
+  transition: background-color 0.3s ease;
+}
+
+/* 状態別の色設定（左ボーダーと対応） */
+.toggle-area.original-state {
+  background: transparent;
+  border: 2px solid #28a745; /* 緑 - 原文状態（翻訳ボタン表示） */
+}
+
+.toggle-area.original-state:hover {
+  background: transparent;
+}
+
+.toggle-area.translation-state {
+  background: transparent;
+  border: 2px solid #007bff; /* 青 - 翻訳状態（原文ボタン表示） */
+}
+
+.toggle-area.translation-state:hover {
+  background: transparent;
+}
+
+.toggle-area.error-state {
+  background: transparent;
+  border: 2px solid #e91e63; /* ピンク - エラー状態（原文ボタン表示） */
+}
+
+.toggle-area.error-state:hover {
+  background: transparent;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  font-weight: bold;
+  user-select: none;
+}
+
+/* 文字色も状態に応じて変更 */
+.toggle-area.original-state .toggle-icon {
+  color: #28a745;
+}
+
+.toggle-area.translation-state .toggle-icon {
+  color: #007bff;
+}
+
+.toggle-area.error-state .toggle-icon {
+  color: #e91e63;
+}
+
+/* ===== ダークモード対応（パネル切り替えエリア） =====
+ * システムのカラースキーム設定に基づく自動切り替え */
+@media (prefers-color-scheme: dark) {
+  .toggle-area.original-state {
+    background: transparent;
+    border: 2px solid #48bb78; /* 明るい緑 */
+  }
+  
+  .toggle-area.original-state:hover {
+    background: transparent;
+  }
+  
+  .toggle-area.original-state .toggle-icon {
+    color: #48bb78;
+  }
+  
+  .toggle-area.translation-state {
+    background: transparent;
+    border: 2px solid #4299e1; /* 明るい青 */
+  }
+  
+  .toggle-area.translation-state:hover {
+    background: transparent;
+  }
+  
+  .toggle-area.translation-state .toggle-icon {
+    color: #4299e1;
+  }
+  
+  .toggle-area.error-state {
+    background: transparent;
+    border: 2px solid #f56565; /* 明るいピンク */
+  }
+  
+  .toggle-area.error-state:hover {
+    background: transparent;
+  }
+  
+  .toggle-area.error-state .toggle-icon {
+    color: #f56565;
+  }
+}
+
+/* ===== モーダル ===== */
+.modal-content {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  background-color: #007bff;
+  color: white;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.modal-header .btn-close {
+  filter: invert(1);
+}
+
+/* ===== フォーム要素 ===== */
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-check-input:checked {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* ===== トースト ===== */
+.toast {
+  min-width: 300px;
+}
+
+.toast-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.toast.show {
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== カード ===== */
+.card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+/* ===== アラート ===== */
+.alert {
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+/* ===== ボタン ===== */
+.btn {
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+/* ===== アイコン ===== */
+.bi {
+  vertical-align: -0.125em;
+}
+
+/* ===== ユーティリティクラス ===== */
+.text-chinese {
+  font-family: var(--chinese-font);
+}
+
+.text-pinyin {
+  font-family: var(--pinyin-font);
+  color: var(--pinyin-color);
+}
+
+.bg-chinese {
+  background-color: var(--chinese-bg);
+}
+
+/* ===== レスポンシブ対応（最小限） ===== */
+@media (max-width: 768px) {
+  .app-container {
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .main-text-area {
+    min-height: 200px;
+    /* 高さはJavaScriptで動的に設定 */
+  }
+  
+  footer {
+    max-height: 40vh;
+  }
+  
+  #translation-display {
+    max-height: 100%;
+  }
+  
+  #translation-display .card-body {
+    max-height: 30vh;
+  }
+  
+  .chinese-text {
+    font-size: 18px;
+    line-height: 2.2;
+  }
+  
+  .chinese-ruby {
+    font-size: 18px;
+    line-height: 2.2;
+  }
+  
+  .chinese-ruby rt {
+    font-size: 11px;
+  }
+  
+  #recognition-btn {
+    min-width: 130px;
+    font-size: 1.1rem;
+  }
+  
+  .btn-group {
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 576px) {
+  header {
+    padding: 0.5rem 0;
+  }
+  
+  main {
+    padding: 0.5rem;
+  }
+  
+  footer {
+    padding: 0.5rem;
+  }
+  
+  .card-body {
+    padding: 1rem 0.75rem;
+  }
+  
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
+
+/* ===== デバッグモード用スタイル ===== */
+body.debug-mode {
+  border: 3px solid #dc3545;
+}
+
+body.debug-mode::before {
+  content: "🐛 DEBUG MODE";
+  position: fixed;
+  top: 0;
+  right: 0;
+  background: #dc3545;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  z-index: 9999;
+}
+
+/* ===== アクセシビリティ ===== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== プリント用スタイル ===== */
+@media print {
+  .app-container {
+    height: auto !important;
+  }
+  
+  header, footer {
+    display: none !important;
+  }
+  
+  .main-text-area {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 1px solid #000;
+  }
+  
+  .chinese-ruby rt {
+    color: #000 !important;
+  }
+  
+  .btn, .modal, .toast {
+    display: none !important;
+  }
+}
+
+/* ===== カスタム選択スタイル ===== */
+::selection {
+  background-color: #007bff;
+  color: white;
+}
+
+::-moz-selection {
+  background-color: #007bff;
+  color: white;
+}
+
+/* ===== フォーカススタイル ===== */
+:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* ===== ローディング状態 ===== */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== ダークモード全般設定 =====
+ * data-theme="dark"属性による手動切り替え
+ * CSS変数を使用してテーマカラーを統一管理 */
+[data-theme="dark"] {
+  --bs-body-bg: #212529;
+  --bs-body-color: #f8f9fa;
+  --bs-border-color: #495057;
+  --chinese-bg: #343a40;
+  --translation-bg: #1e3a3f;
+  --bs-light: #495057;
+  --bs-secondary: #6c757d;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .bg-light {
+  background-color: var(--bs-light) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+[data-theme="dark"] .main-text-area {
+  background-color: var(--chinese-bg);
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .text-line {
+  background-color: #495057;
+  border-left-color: #28a745;
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .text-line.interim-text {
+  border-left-color: #0d6efd;
+  background-color: #2a2d3a;
+}
+
+[data-theme="dark"] .text-line:hover {
+  background-color: #5a6268;
+}
+
+[data-theme="dark"] .translation-area {
+  background-color: var(--translation-bg);
+}
+
+[data-theme="dark"] .card {
+  background-color: #343a40;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .card-header {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .modal-content {
+  background-color: #343a40;
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .modal-header {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .form-label {
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .form-text {
+  color: #adb5bd;
+}
+
+[data-theme="dark"] .form-select {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .form-select:focus {
+  background-color: #495057;
+  border-color: #0d6efd;
+  color: var(--bs-body-color);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+[data-theme="dark"] .form-select option {
+  background-color: #495057;
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .modal-footer {
+  border-color: var(--bs-border-color);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+[data-theme="dark"] .form-control {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .form-control:focus {
+  background-color: #495057;
+  border-color: #0d6efd;
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  color: var(--bs-body-color);
+  border-color: var(--bs-border-color);
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+[data-theme="dark"] .chinese-ruby rt {
+  color: #adb5bd;
+}
+
+[data-theme="dark"] .text-muted {
+  color: #dee2e6 !important;
+}
+
+[data-theme="dark"] .alert-info {
+  background-color: #1e3a3f;
+  border-color: #2a5761;
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: #1e3a2f;
+  border-color: #2a5a3f;
+  color: #86efac;
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: #3a1e1e;
+  border-color: #5a2f2f;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .translation-placeholder {
+  color: #dee2e6;
+}
+
+[data-theme="dark"] .initial-message {
+  color: #dee2e6 !important;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: #adb5bd;
+  opacity: 1;
+}
+
+[data-theme="dark"] .toast {
+  background-color: #343a40;
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .toast-header {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+[data-theme="dark"] footer {
+  background-color: #495057;
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+
+/* ===== 自動スクロールボタン ===== */
+#auto-scroll-toggle {
+  transition: all 0.15s ease-in-out;
+  position: relative;
+}
+
+#auto-scroll-toggle.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+#auto-scroll-toggle.btn-outline-primary {
+  background-color: transparent;
+  border-color: #007bff;
+  color: #007bff;
+}
+
+#auto-scroll-toggle:hover {
+  transform: translateY(-1px);
+}
+
+#auto-scroll-toggle:active {
+  transform: translateY(0);
+  transition: none;
+}
+
+/* ダークモード切り替えボタンのアニメーション */
+#theme-toggle {
+  transition: all 0.3s ease;
+}
+
+#theme-icon {
+  transition: transform 0.3s ease;
+}
+
+[data-theme="dark"] #theme-icon {
+  transform: rotate(180deg);
+}
