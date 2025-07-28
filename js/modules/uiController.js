@@ -541,13 +541,18 @@ class UIController {
     }
 
     /**
-     * ユーザーのテキスト選択でのインスタント翻訳機能
-     * メインテキストエリアで中国語テキストを選択すると翻訳エリアに結果表示
-     * ピンイン、タイムスタンプ、UI要素を除去して純粋な中国語テキストを抽出
+     * ユーザーのテキスト選択でのクイック翻訳機能
+     * メインテキストエリアで中国語テキストを選択すると翻訳入力欄にコピー
+     * クイック翻訳エリアが非表示時は動作せず、ピンイン・UI要素は除去して処理
      * 中国語文字が含まれない場合や翻訳パネル内選択はスキップ
      */
     handleTextSelection() {
         try {
+            // クイック翻訳エリアが非表示の場合は何もしない
+            if (!this.isQuickTranslateAvailable()) {
+                return;
+            }
+            
             const selection = window.getSelection();
             let selectedText = this.extractTextWithoutPinyin(selection);
             
@@ -618,15 +623,15 @@ class UIController {
                 return;
             }
             
-            // 翻訳実行
-            this.translateSelectedText(selectedText);
+            // 翻訳入力欄にテキストをコピー
+            this.copyToTranslationInput(selectedText);
             
-            // 翻訳実行後に選択を解除
+            // コピー後に選択を解除
             setTimeout(() => {
                 if (window.getSelection) {
                     window.getSelection().removeAllRanges();
                 }
-            }, 500);
+            }, this.config.quickTranslate.selectionClearDelay);
             
         } catch (error) {
         }
@@ -934,39 +939,67 @@ class UIController {
     }
 
     /**
-     * ユーザー選択テキストのメイン翻訳エリアへの翻訳実行
-     * クリーニング済みテキストをgeminiTranslatorに送信し、結果をメイン翻訳エリアに表示
-     * stateManagerで翻訳状態を管理し、エラーハンドリングも実行
+     * 選択テキストを翻訳入力欄にコピー
+     * クイック翻訳機能：選択されたテキストを手動翻訳入力欄にコピーし、
+     * 視覚的フィードバックとフォーカス移動でユーザビリティを向上
      * 
-     * @param {string} text - 翻訳対象の中国語テキスト
-     * @returns {Promise<void>}
+     * @param {string} text - コピー対象の中国語テキスト
      */
-    async translateSelectedText(text) {
+    copyToTranslationInput(text) {
         try {
-            if (!window.geminiTranslator) {
+            if (!text || !text.trim()) {
                 return;
             }
             
-            // 翻訳実行
-            const result = await window.geminiTranslator.translate(text);
+            const trimmedText = text.trim();
             
-            if (!result.success) {
-                // エラーは翻訳エリアに表示されるためトーストは不要
-            }
+            // 翻訳入力欄にテキストを設定
+            this.elements.$manualTranslationInput.val(trimmedText);
+            
+            // 入力欄にフォーカスを当てる（ユーザーがすぐに編集・実行できるように）
+            this.elements.$manualTranslationInput.focus();
+            
+            // 視覚的フィードバック：入力欄を一時的にハイライト
+            this.showInputFeedback();
             
         } catch (error) {
-            // エラーは翻訳エリアに表示されるためトーストは不要
+            // エラーハンドリング（サイレント）
         }
     }
 
     /**
+     * 翻訳入力欄の視覚的フィードバック表示
+     * テキストコピー時に一時的なハイライト効果でユーザーに操作完了を通知
+     */
+    showInputFeedback() {
+        const { feedbackClass, feedbackDuration } = this.config.quickTranslate;
+        this.elements.$manualTranslationInput.addClass(feedbackClass);
+        setTimeout(() => {
+            this.elements.$manualTranslationInput.removeClass(feedbackClass);
+        }, feedbackDuration);
+    }
+
+    /**
+     * クイック翻訳機能が利用可能かチェック
+     * @returns {boolean} 翻訳エリアが表示されている場合true
+     */
+    isQuickTranslateAvailable() {
+        return stateManager.getState('config.showTranslationArea');
+    }
+
+    /**
      * メイン翻訳エリアのクリックイベント処理
-     * 翻訳エリアで原文をクリックした場合の再翻訳機能
+     * 翻訳エリアで原文をクリックした場合のテキストコピー機能
      * 文字選択がない場合のみ動作し、選択翻訳との競合を回避
      * 
      * @param {Event} e - クリックイベントオブジェクト
      */
     handleTranslationAreaClick(e) {
+        // クイック翻訳エリアが非表示の場合は何もしない
+        if (!this.isQuickTranslateAvailable()) {
+            return;
+        }
+        
         // 文字選択がある場合は通常の選択翻訳を優先
         const selection = window.getSelection();
         if (selection && selection.toString().trim()) {
@@ -977,8 +1010,8 @@ class UIController {
         const originalText = $(e.target).text().trim();
         
         if (originalText && /[\u4e00-\u9fff]/.test(originalText)) {
-            // 中国語が含まれている場合のみ再翻訳
-            this.translateSelectedText(originalText);
+            // 中国語が含まれている場合のみ翻訳入力欄にコピー
+            this.copyToTranslationInput(originalText);
         }
     }
 
@@ -1112,7 +1145,7 @@ class UIController {
                     $translatedSpan.removeClass('text-success text-danger');
                 }
             } else {
-                $placeholder.removeClass('d-none').text('音声認識したテキストを選択するとクイック翻訳が表示されます');
+                $placeholder.removeClass('d-none').text('音声認識したテキストを選択すると翻訳入力欄にコピーされます');
                 $content.addClass('d-none');
             }
         }

@@ -34,6 +34,11 @@ const UI_CONFIG = {
         recognizing: '音声認識中...',
         error: 'エラー - 再試行',
         interim: '認識中...'
+    },
+    quickTranslate: {
+        selectionClearDelay: 300,       // テキスト選択解除遅延（ms）
+        feedbackDuration: 800,          // 視覚フィードバック表示時間（ms）- UXを考慮して短縮
+        feedbackClass: 'bg-success bg-opacity-10'  // フィードバック用CSSクラス
     }
 };
 

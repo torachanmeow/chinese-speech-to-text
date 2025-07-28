@@ -16,6 +16,10 @@
   --chinese-font: "SimSun", "NSimSun", "Microsoft YaHei", "PMingLiU", "MingLiU", monospace;
   --japanese-font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
   --pinyin-font: "Arial", "Helvetica", "Liberation Sans", monospace;
+  
+  /* インタラクション色 */
+  --hover-bg-light: rgba(0, 123, 255, 0.05);
+  --hover-bg-dark: rgba(0, 123, 255, 0.1);
 }
 
 /* ===== 基本設定 ===== */
@@ -284,6 +288,16 @@ main {
   text-align: center;
   margin: 0 1px;
   position: relative;
+  /* テキスト選択とユーザビリティの改善 */
+  cursor: text;
+  user-select: text;
+  padding: 2px 1px;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.chinese-ruby:hover {
+  background-color: var(--hover-bg-light);
 }
 
 .chinese-ruby rt {
@@ -301,6 +315,8 @@ main {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  /* ルビ部分はマウスイベントを透過させる */
+  pointer-events: none;
 }
 
 /* テキスト選択時のハイライト色設定 */
@@ -1006,6 +1022,10 @@ body.debug-mode::before {
 
 [data-theme="dark"] .chinese-ruby rt {
   color: #adb5bd;
+}
+
+[data-theme="dark"] .chinese-ruby:hover {
+  background-color: var(--hover-bg-dark);
 }
 
 [data-theme="dark"] .text-muted {

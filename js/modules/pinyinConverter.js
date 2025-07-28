@@ -92,7 +92,7 @@ class PinyinConverter {
                 // 中国語文字の場合はピンインを取得してrubyタグで囲む
                 const pinyin = await this.getSingleCharPinyin(char);
                 if (pinyin && pinyin !== char) {
-                    rubyParts.push(`<ruby>${char}<rt>${pinyin}</rt></ruby>`);
+                    rubyParts.push(`<ruby class="chinese-ruby">${char}<rt>${pinyin}</rt></ruby>`);
                 } else {
                     rubyParts.push(char);
                 }
