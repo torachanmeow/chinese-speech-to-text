@@ -438,13 +438,13 @@ class StateManager {
             
             if (recognition.isListening) {
                 $btn.addClass('btn-success');
-                $btn.find('#btn-text').text('音声認識中...');
+                $btn.find('#btn-text').text(APP_CONFIG.UI_CONFIG.buttonTexts.recognizing);
             } else if (recognition.errorCount > 0) {
                 $btn.addClass('btn-danger');
-                $btn.find('#btn-text').text('エラー - 再試行');
+                $btn.find('#btn-text').text(APP_CONFIG.UI_CONFIG.buttonTexts.error);
             } else {
                 $btn.addClass('btn-secondary');
-                $btn.find('#btn-text').text('開始音声認識');
+                $btn.find('#btn-text').text(APP_CONFIG.UI_CONFIG.buttonTexts.recognition);
             }
         }
     }

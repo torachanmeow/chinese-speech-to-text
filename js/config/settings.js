@@ -39,15 +39,27 @@ const SPEECH_CONFIG = {
     interimResults: true,       // 中間結果表示
     maxAlternatives: 1,         // 代替候補数
     deadTime: 3000,            // Watchdog判定時間（ms）
+    maxSessionTime: 30000,     // 最大セッション時間（ms）
     watchdogInterval: 500,      // Watchdog監視間隔（ms）
     maxErrorCount: 5,          // 最大エラー回数
-    restartDelay: 1000         // 再起動遅延（ms）
+    restartDelay: 1000,        // 再起動遅延（ms）
+    duplicateCheckTimeout: 1000 // 重複処理チェック有効時間（ms）
 };
 
 // UIシステム設定
 const UI_CONFIG = {
     maxTextLines: 50,          // 最大テキスト行数
-    autoScrollDelay: 100       // 自動スクロール遅延（ms）
+    autoScrollDelay: 100,      // 自動スクロール遅延（ms）
+    interimTextCleanupDelay: {
+        first: 10,             // 1回目の削除遅延（ms）
+        final: 50              // 最終確認遅延（ms）
+    },
+    buttonTexts: {
+        recognition: '音声認識',
+        recognizing: '音声認識中...',
+        error: 'エラー - 再試行',
+        interim: '認識中...'
+    }
 };
 
 // API設定

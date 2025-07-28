@@ -34,12 +34,19 @@ class SpeechRecognitionManager {
         // Watchdog機能（認識停止検知・自動再起動）
         this.watchdogTimer = null;        // Watchdogタイマー
         this.lastResultTime = 0;          // 最後に結果を受信した時刻
+        this.sessionStartTime = 0;        // セッション開始時刻
         
         // エラー管理
         this.errorCount = 0;              // 連続エラー回数
         
         // 外部連携
         this.pinyinConverter = null;      // ピンイン変換器インスタンス
+        
+        // 重複防止
+        this.processedTexts = new Set();  // 処理済みテキストの追跡
+        
+        // 手動停止フラグ
+        this.manualStop = false;          // 手動停止時の自動再開防止
         
         // 設定の読み込み
         this.config = APP_CONFIG.SPEECH_CONFIG;
@@ -109,6 +116,7 @@ class SpeechRecognitionManager {
             this.isRecognizing = true;
             this.sessionId = Utils.generateId('session');
             this.lastResultTime = Date.now();
+            this.sessionStartTime = Date.now();
             this.errorCount = 0;
             
             stateManager.updateRecognitionState({
@@ -122,16 +130,25 @@ class SpeechRecognitionManager {
         };
 
         // 音声認識終了イベント
-        // 状態をクリアし、Watchdogタイマーを停止
+        // 予期しない終了時の自動再開と状態クリア
         this.recognition.onend = () => {
-            this.isRecognizing = false;
+            const wasRecognizing = this.isRecognizing;
             
-            stateManager.updateRecognitionState({
-                isActive: false,
-                isListening: false
-            });
+            this.resetInternalState();
+            this.resetStateManagerState();
             
-            this.stopWatchdog();
+            // 音声認識終了時に残っている中間結果をクリア
+            $(document).trigger('clearInterimText');
+            
+            // 予期しない終了の場合は自動再開（手動停止以外）
+            if (wasRecognizing && !this.manualStop) {
+                setTimeout(() => {
+                    this.safeRestart();
+                }, this.config.restartDelay);
+            }
+            
+            // 手動停止フラグをリセット
+            this.manualStop = false;
         };
 
         // 音声認識結果受信イベント
@@ -244,6 +261,16 @@ class SpeechRecognitionManager {
             let trimmedText = Utils.trimChinese(text);
             if (!trimmedText) return;
             
+            // 重複処理チェック：同じテキストを短時間で複数回処理しない
+            if (this.processedTexts.has(trimmedText)) {
+                return;
+            }
+            
+            // 処理済みテキストに追加（設定時間後に自動削除）
+            this.processedTexts.add(trimmedText);
+            setTimeout(() => {
+                this.processedTexts.delete(trimmedText);
+            }, this.config.duplicateCheckTimeout);
             
             // 音声認識結果に含まれる可能性のあるピンインを除去
             // 例：「我wǒ说shuō中zhōng文wén」→「我说中文」
@@ -294,6 +321,10 @@ class SpeechRecognitionManager {
         this.errorCount++;
         const errorCode = this.mapErrorCode(event.error);
         
+        // エラー発生時は認識状態をリセット
+        this.performFullReset(true);
+        
+        // エラー回数を更新
         stateManager.updateRecognitionState({
             errorCount: this.errorCount
         });
@@ -309,9 +340,7 @@ class SpeechRecognitionManager {
         // 自動再起動を試行（特定のエラーの場合）
         if (this.shouldAutoRestart(event.error)) {
             setTimeout(() => {
-                if (!this.isRecognizing) {
-                    this.safeRestart();
-                }
+                this.safeRestart();
             }, this.config.restartDelay);
         }
     }
@@ -329,7 +358,8 @@ class SpeechRecognitionManager {
             'no-speech': 'NO_SPEECH',
             'aborted': 'ABORTED',
             'audio-capture': 'AUDIO_CAPTURE',
-            'network': 'NETWORK'
+            'network': 'NETWORK',
+            'timeout': 'TIMEOUT'
         };
         
         return errorMap[error] || 'UNKNOWN';
@@ -350,7 +380,7 @@ class SpeechRecognitionManager {
 
     /**
      * Watchdog機能の開始
-     * 定期的に最後の結果受信時刻をチェックし、タイムアウト時に自動再起動
+     * 定期的に最後の結果受信時刻と絶対時間をチェックし、タイムアウト時に自動再起動
      * 音声認識が無応答状態になった場合の復旧機能
      * タイマー間隔とタイムアウト時間は設定ファイルで制御
      */
@@ -360,9 +390,15 @@ class SpeechRecognitionManager {
         this.watchdogTimer = setInterval(() => {
             if (!this.isRecognizing) return;
             
-            const timeSinceLastResult = Date.now() - this.lastResultTime;
+            const now = Date.now();
+            const timeSinceLastResult = now - this.lastResultTime;
+            const timeSinceSessionStart = now - this.sessionStartTime;
             
-            if (timeSinceLastResult > this.config.deadTime) {
+            // 2つの条件でタイムアウト判定し、自動再開
+            const isResultTimeout = timeSinceLastResult > this.config.deadTime;
+            const isSessionTimeout = timeSinceSessionStart > this.config.maxSessionTime;
+            
+            if (isResultTimeout || isSessionTimeout) {
                 this.safeRestart();
             }
         }, this.config.watchdogInterval);
@@ -380,6 +416,61 @@ class SpeechRecognitionManager {
     }
 
     /**
+     * 認識インスタンスの強制停止処理
+     * @private
+     */
+    forceStopRecognition() {
+        try {
+            if (this.recognition) {
+                this.recognition.stop();
+            }
+        } catch (e) {
+            // 停止エラーは無視（既に停止している可能性）
+        }
+    }
+
+    /**
+     * 内部状態の完全リセット処理
+     * @private
+     */
+    resetInternalState() {
+        this.isRecognizing = false;
+        this.stopWatchdog();
+    }
+
+    /**
+     * 状態管理システムの状態リセット処理
+     * @private
+     * @param {boolean} clearTexts - テキスト関連の状態もクリアするかどうか
+     */
+    resetStateManagerState(clearTexts = false) {
+        const stateUpdate = {
+            isActive: false,
+            isListening: false
+        };
+        
+        if (clearTexts) {
+            stateUpdate.currentText = '';
+            stateUpdate.interimText = '';
+        }
+        
+        stateManager.updateRecognitionState(stateUpdate);
+    }
+
+    /**
+     * 音声認識の完全リセット処理
+     * 内部状態、音声認識インスタンス、状態管理、中間結果を一括でリセット
+     * @private
+     * @param {boolean} clearTexts - テキスト関連の状態もクリアするかどうか
+     */
+    performFullReset(clearTexts = false) {
+        this.resetInternalState();
+        this.forceStopRecognition();
+        this.resetStateManagerState(clearTexts);
+        $(document).trigger('clearInterimText');
+    }
+
+    /**
      * 音声認識の開始
      * 重複起動チェック、言語設定の更新、認識インスタンスの開始
      * エラー時は適切なエラー状態を設定
@@ -389,24 +480,45 @@ class SpeechRecognitionManager {
     start() {
         try {
             if (!this.recognition) {
-                stateManager.setError('SPEECH_RECOGNITION', 'NOT_SUPPORTED');
-                return false;
+                // 認識インスタンスが存在しない場合は再初期化を試行
+                if (!this.initializeRecognition()) {
+                    stateManager.setError('SPEECH_RECOGNITION', 'NOT_SUPPORTED');
+                    return false;
+                }
             }
             
+            // 既に認識中の場合は重複起動を防ぐ
             if (this.isRecognizing) {
                 return true;
             }
             
-            // 言語設定を更新
-            const language = stateManager.getState('config.language') || 'zh-CN';
-            const speechLang = language;
-            this.recognition.lang = speechLang;
+            // 認識インスタンスが既に動作中の場合は強制停止
+            this.forceStopRecognition();
             
+            // 状態を確実にリセット
+            this.resetInternalState();
             
-            this.recognition.start();
+            // 少し待ってから開始（前の認識が完全に終了するまで）
+            setTimeout(() => {
+                try {
+                    // 言語設定を更新
+                    const language = stateManager.getState('config.language') || 'zh-CN';
+                    const speechLang = language;
+                    this.recognition.lang = speechLang;
+                    
+                    this.recognition.start();
+                } catch (error) {
+                    // エラー時は状態をリセット
+                    this.resetInternalState();
+                    stateManager.setError('SPEECH_RECOGNITION', 'ABORTED', error.message);
+                }
+            }, 100);
+            
             return true;
             
         } catch (error) {
+            // エラー時は状態をリセット
+            this.resetInternalState();
             stateManager.setError('SPEECH_RECOGNITION', 'ABORTED', error.message);
             return false;
         }
@@ -425,39 +537,17 @@ class SpeechRecognitionManager {
                 return true;
             }
             
-            // 強制的に認識フラグをクリア
-            this.isRecognizing = false;
+            // 手動停止フラグを設定（自動再開を防ぐ）
+            this.manualStop = true;
             
-            // Watchdogを先に停止
-            this.stopWatchdog();
-            
-            // 音声認識インスタンスを停止
-            if (this.recognition) {
-                this.recognition.stop();
-            }
-            
-            // 状態を確実に更新
-            stateManager.updateRecognitionState({
-                isActive: false,
-                isListening: false,
-                currentText: '',
-                interimText: ''
-            });
+            // 状態をリセット
+            this.performFullReset(true);
             
             return true;
             
         } catch (error) {
             // エラーが発生しても状態はクリア
-            this.isRecognizing = false;
-            this.stopWatchdog();
-            
-            stateManager.updateRecognitionState({
-                isActive: false,
-                isListening: false,
-                currentText: '',
-                interimText: ''
-            });
-            
+            this.performFullReset(true);
             return false;
         }
     }
@@ -471,22 +561,30 @@ class SpeechRecognitionManager {
     safeRestart() {
         try {
             
-            const wasRecognizing = this.isRecognizing;
             const currentLanguage = stateManager.getState('config.language');
             
-            // 一旦停止
-            this.stop();
+            // 強制的に状態をクリア
+            this.performFullReset(true);
             
-            // 少し待ってから再開
-            setTimeout(() => { 
-                if (wasRecognizing) {
-                    // 言語設定を更新してから開始
-                    if (this.recognition) {
-                        const speechLang = currentLanguage;
-                        this.recognition.lang = speechLang;
-                    }
-                    this.start();
+            // エラー状態をクリア（エラーカウントをリセット）
+            this.errorCount = 0;
+            stateManager.updateRecognitionState({
+                errorCount: 0
+            });
+            
+            // 少し待ってから再初期化と再開
+            setTimeout(() => {
+                // 認識インスタンスを再初期化
+                this.initializeRecognition();
+                
+                // 言語設定を更新
+                if (this.recognition) {
+                    const speechLang = currentLanguage;
+                    this.recognition.lang = speechLang;
                 }
+                
+                // 再開
+                this.start();
             }, this.config.restartDelay);
             
         } catch (error) {
@@ -588,7 +686,6 @@ class SpeechRecognitionManager {
     destroy() {
         try {
             this.stop();
-            this.stopWatchdog();
             
             if (this.recognition) {
                 this.recognition.onstart = null;

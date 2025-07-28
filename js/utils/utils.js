@@ -24,6 +24,13 @@ const Utils = {
         return APP_CONFIG.ERROR_MESSAGES[category]?.[code] || 'Unknown error occurred';
     },
     
+    // 強制リフロー（DOM描画の同期化）
+    forceReflow(element) {
+        if (element && element.length) {
+            element[0].offsetHeight; // 強制リフロー
+        }
+    },
+    
     // ブラウザサポート確認
     checkBrowserSupport() {
         const support = {

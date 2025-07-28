@@ -221,6 +221,12 @@ class UIController {
             await this.displayInterimText(data.text);
         }, 100));
 
+        // 中間結果クリアイベント
+        // 音声認識終了時に残っている中間結果を削除（遅延削除で確実に）
+        $(document).on('clearInterimText', () => {
+            this.removeInterimText(false);
+        });
+
         // アプリケーションエラーイベント
         // stateManagerからのエラー通知（翻訳エリアで表示されるためトースト不要）
         $(document).on('state:error', (event, error) => {
@@ -403,8 +409,11 @@ class UIController {
             // 初期メッセージをクリア
             this.clearInitialMessage();
             
-            // 中間結果を削除（最終結果が確定したため）
-            this.elements.$mainTextArea.find('.interim-text').remove();
+            // DOM操作をバッチ化して描画の同期性を高める
+            const $mainTextArea = this.elements.$mainTextArea;
+            
+            // 中間結果を即座に削除（最終結果が確定したため）
+            $mainTextArea.find('.interim-text').remove();
             
             // HTMLを構築（データ属性に元テキストを保存）
             const $textLine = $(`
@@ -427,8 +436,11 @@ class UIController {
             // 初期状態のボタンを設定
             this.updateToggleButton($textLine.find('.chinese-text'), 'original');
             
-            // 追加
-            this.elements.$mainTextArea.append($textLine);
+            // 削除と追加を同一フレーム内で実行
+            $mainTextArea.append($textLine);
+            
+            // 強制リフローで描画を確定
+            Utils.forceReflow($mainTextArea);
             
             // 自動翻訳が有効な場合、自動的に翻訳状態に切り替え
             if (stateManager.getState('config.autoTranslate')) {
@@ -464,8 +476,8 @@ class UIController {
             // 初期メッセージをクリア
             this.clearInitialMessage();
             
-            // 既存の中間結果表示を削除
-            this.elements.$mainTextArea.find('.interim-text').remove();
+            // 既存の中間結果表示を即座に削除
+            this.removeInterimText(true);
             
             if (interimText && interimText.trim()) {
                 let displayText = Utils.escapeHtml(interimText);
@@ -486,7 +498,7 @@ class UIController {
                 // 中間結果を表示（グレーボーダー設定）
                 const interimHtml = `
                     <div class="text-line interim-text mb-2" style="opacity: 0.6; border-left-color: #6c757d;">
-                        <small class="text-muted">認識中...</small>
+                        <small class="text-muted">${APP_CONFIG.UI_CONFIG.buttonTexts.interim}</small>
                         <div class="chinese-text">${displayText}</div>
                     </div>
                 `;
@@ -962,13 +974,13 @@ class UIController {
         
         if (recognitionState.isListening) {
             $btn.addClass('btn-success');
-            $text.text('音声入力中...');
+            $text.text(APP_CONFIG.UI_CONFIG.buttonTexts.recognizing);
         } else if (recognitionState.errorCount > 0) {
             $btn.addClass('btn-danger');
-            $text.text('エラー - 再試行');
+            $text.text(APP_CONFIG.UI_CONFIG.buttonTexts.error);
         } else {
             $btn.addClass('btn-secondary');
-            $text.text('音声入力');
+            $text.text(APP_CONFIG.UI_CONFIG.buttonTexts.recognition);
         }
     }
 
@@ -1070,6 +1082,33 @@ class UIController {
         const $textMutedCenter = this.elements.$mainTextArea.find('.text-muted.text-center');
         if ($textMutedCenter.length > 0 && $textMutedCenter.text().includes('音声認識を開始してください')) {
             $textMutedCenter.remove();
+        }
+    }
+
+    /**
+     * 中間結果テキストの確実な削除
+     * @param {boolean} immediate - 即座に削除のみ行うかどうか
+     */
+    removeInterimText(immediate = false) {
+        // 即座に削除
+        this.elements.$mainTextArea.find('.interim-text').remove();
+        
+        if (immediate) {
+            // 描画更新を強制的に同期させる
+            Utils.forceReflow(this.elements.$mainTextArea);
+        } else {
+            // 少し遅延して再度削除（タイミング問題対策）
+            setTimeout(() => {
+                this.elements.$mainTextArea.find('.interim-text').remove();
+            }, APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.first);
+            
+            // さらに遅延して最終確認
+            setTimeout(() => {
+                const remainingInterim = this.elements.$mainTextArea.find('.interim-text');
+                if (remainingInterim.length > 0) {
+                    remainingInterim.remove();
+                }
+            }, APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.final);
         }
     }
 
