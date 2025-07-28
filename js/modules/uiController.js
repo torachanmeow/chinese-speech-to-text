@@ -1233,16 +1233,24 @@ class UIController {
      * プログラム的スクロールフラグで手動スクロールと区別し、競合状態を防止
      */
     scrollToBottom() {
+        // 既にスクロール処理中の場合は重複実行を防止
+        if (this.isAutoScrolling) {
+            return;
+        }
+        
         const element = this.elements.$mainTextArea[0];
         if (element) {
             this.isAutoScrolling = true;
-            setTimeout(() => {
+            
+            // requestAnimationFrameを使用してより効率的なスクロール処理
+            requestAnimationFrame(() => {
                 element.scrollTop = element.scrollHeight;
-                // スクロール完了後にフラグをリセット
-                setTimeout(() => {
+                
+                // スクロール完了を即座に確認し、フラグをリセット
+                requestAnimationFrame(() => {
                     this.isAutoScrolling = false;
-                }, 50);
-            }, this.config.autoScrollDelay);
+                });
+            });
         }
     }
 
