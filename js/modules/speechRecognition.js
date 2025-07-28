@@ -135,9 +135,9 @@ class SpeechRecognitionManager {
             const wasRecognizing = this.isRecognizing;
             
             this.resetInternalState();
-            this.resetStateManagerState();
+            this.resetStateManagerState(true); // テキスト状態もクリア
             
-            // 音声認識終了時に残っている中間結果をクリア
+            // 音声認識終了時に残っている中間結果を即座にクリア
             $(document).trigger('clearInterimText');
             
             // 予期しない終了の場合は自動再開（手動停止以外）
@@ -454,6 +454,22 @@ class SpeechRecognitionManager {
     }
 
     /**
+     * 中間結果を確実にクリアする共通処理
+     * 複数のタイミングで削除イベントを発火して取りこぼしを防止
+     * @private
+     */
+    clearInterimTextReliably() {
+        // 即座にクリア
+        $(document).trigger('clearInterimText');
+        
+        // DOM更新タイミングを考慮した段階的クリア
+        const clearDelays = [10, 50];
+        clearDelays.forEach(delay => {
+            setTimeout(() => $(document).trigger('clearInterimText'), delay);
+        });
+    }
+
+    /**
      * 音声認識の完全リセット処理
      * 内部状態、音声認識インスタンス、状態管理、中間結果を一括でリセット
      * @private
@@ -463,7 +479,7 @@ class SpeechRecognitionManager {
         this.resetInternalState();
         this.forceStopRecognition();
         this.resetStateManagerState(clearTexts);
-        $(document).trigger('clearInterimText');
+        this.clearInterimTextReliably();
     }
 
     /**
@@ -539,11 +555,18 @@ class SpeechRecognitionManager {
             // 状態をリセット
             this.performFullReset(true);
             
+            // 手動停止時の追加保険（遅延クリア）
+            const stopDelays = [100, 200];
+            stopDelays.forEach(delay => {
+                setTimeout(() => $(document).trigger('clearInterimText'), delay);
+            });
+            
             return true;
             
         } catch (error) {
             // エラーが発生しても状態はクリア
             this.performFullReset(true);
+            this.clearInterimTextReliably();
             return false;
         }
     }

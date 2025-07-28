@@ -247,9 +247,9 @@ class UIController {
         }, 100));
 
         // 中間結果クリアイベント
-        // 音声認識終了時に残っている中間結果を削除（遅延削除で確実に）
+        // 音声認識終了時に残っている中間結果を確実に削除
         $(document).on('clearInterimText', () => {
-            this.removeInterimText(false);
+            this.removeInterimText('immediate');
         });
 
         // アプリケーションエラーイベント
@@ -501,8 +501,8 @@ class UIController {
             // 初期メッセージをクリア
             this.clearInitialMessage();
             
-            // 既存の中間結果表示を即座に削除
-            this.removeInterimText(true);
+            // 既存の中間結果を同期削除（新しい表示と競合しないように）
+            this.removeInterimText('sync');
             
             if (interimText && interimText.trim()) {
                 let displayText = Utils.escapeHtml(interimText);
@@ -1175,29 +1175,38 @@ class UIController {
     }
 
     /**
-     * 中間結果テキストの確実な削除
-     * @param {boolean} immediate - 即座に削除のみ行うかどうか
+     * 中間結果テキストの削除
+     * 削除方式を明確に分離して意図を明確化
+     * @param {string} mode - 削除方式: 'sync' | 'immediate' | 'delayed'
      */
-    removeInterimText(immediate = false) {
-        // 即座に削除
-        this.elements.$mainTextArea.find('.interim-text').remove();
+    removeInterimText(mode = 'delayed') {
+        const performRemoval = () => {
+            this.elements.$mainTextArea.find('.interim-text').remove();
+        };
         
-        if (immediate) {
-            // 描画更新を強制的に同期させる
-            Utils.forceReflow(this.elements.$mainTextArea);
-        } else {
-            // 少し遅延して再度削除（タイミング問題対策）
-            setTimeout(() => {
-                this.elements.$mainTextArea.find('.interim-text').remove();
-            }, APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.first);
-            
-            // さらに遅延して最終確認
-            setTimeout(() => {
-                const remainingInterim = this.elements.$mainTextArea.find('.interim-text');
-                if (remainingInterim.length > 0) {
-                    remainingInterim.remove();
-                }
-            }, APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.final);
+        // 即座に削除（全モード共通）
+        performRemoval();
+        
+        switch (mode) {
+            case 'sync':
+                // 同期削除のみ（表示前の削除で使用）
+                break;
+                
+            case 'immediate':
+                // 描画更新を強制して再削除（停止時の確実削除）
+                Utils.forceReflow(this.elements.$mainTextArea);
+                performRemoval();
+                requestAnimationFrame(performRemoval);
+                break;
+                
+            case 'delayed':
+                // 段階的遅延削除（通常の削除処理）
+                const delays = [
+                    APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.first,
+                    APP_CONFIG.UI_CONFIG.interimTextCleanupDelay.final
+                ];
+                delays.forEach(delay => setTimeout(performRemoval, delay));
+                break;
         }
     }
 
@@ -1230,28 +1239,29 @@ class UIController {
     /**
      * メインテキストエリアの自動スクロール実行
      * 新しいテキスト追加時に自動で最新位置（一番下）にスクロール
-     * プログラム的スクロールフラグで手動スクロールと区別し、競合状態を防止
+     * requestAnimationFrameを使用した効率的なスクロール処理でカクつきを防止
+     * プログラム的スクロールフラグで重複実行を防止
      */
     scrollToBottom() {
-        // 既にスクロール処理中の場合は重複実行を防止
         if (this.isAutoScrolling) {
             return;
         }
         
         const element = this.elements.$mainTextArea[0];
-        if (element) {
-            this.isAutoScrolling = true;
-            
-            // requestAnimationFrameを使用してより効率的なスクロール処理
-            requestAnimationFrame(() => {
-                element.scrollTop = element.scrollHeight;
-                
-                // スクロール完了を即座に確認し、フラグをリセット
-                requestAnimationFrame(() => {
-                    this.isAutoScrolling = false;
-                });
-            });
+        if (!element) {
+            return;
         }
+        
+        this.isAutoScrolling = true;
+        
+        // 二重のrequestAnimationFrameで確実なDOM反映とスクロール実行
+        requestAnimationFrame(() => {
+            element.scrollTop = element.scrollHeight;
+            
+            requestAnimationFrame(() => {
+                this.isAutoScrolling = false;
+            });
+        });
     }
 
     /**
@@ -1405,18 +1415,11 @@ class UIController {
         const newState = !currentState;
         
         stateManager.setState('config.autoScroll', newState);
-        // 自動スクロール設定は保存しない
-        
         this.updateAutoScrollButton(newState);
         
         // ONにした場合は最新位置にスクロール
         if (newState) {
-            this.isAutoScrolling = true;
             this.scrollToBottom();
-            // 少し待ってからフラグをリセット
-            setTimeout(() => {
-                this.isAutoScrolling = false;
-            }, 200);
         }
     }
 

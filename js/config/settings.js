@@ -3,31 +3,6 @@
  * Chinese Speech to Text
  */
 
-// ========================================================================================
-// Geminiモデル定義
-// ========================================================================================
-const GEMINI_MODELS = {
-    'gemini-2.0-flash': {
-        name: 'Gemini 2.0 Flash',
-        contextWindow: 1000000,
-        maxTokens: 8192
-    },
-    'gemini-2.5-flash-lite': {
-        name: 'Gemini 2.5 Flash-Lite',
-        contextWindow: 1000000,
-        maxTokens: 8192
-    },
-    'gemini-2.0-flash-lite': {
-        name: 'Gemini 2.0 Flash-Lite',
-        contextWindow: 1000000,
-        maxTokens: 8192
-    },
-    'gemini-1.5-flash': {
-        name: 'Gemini 1.5 Flash',
-        contextWindow: 1000000,
-        maxTokens: 8192
-    }
-};
 
 // ========================================================================================
 // システム設定
@@ -49,10 +24,10 @@ const SPEECH_CONFIG = {
 // UIシステム設定
 const UI_CONFIG = {
     maxTextLines: 50,          // 最大テキスト行数
-    autoScrollDelay: 100,      // 自動スクロール遅延（ms）
     interimTextCleanupDelay: {
-        first: 10,             // 1回目の削除遅延（ms）
-        final: 50              // 最終確認遅延（ms）
+        // 中間テキスト削除の段階的遅延設定（'delayed'モード用）
+        first: 10,             // DOM更新後の1回目削除遅延（ms）
+        final: 50              // 確実性保証の最終削除遅延（ms）
     },
     buttonTexts: {
         recognition: '音声認識',
@@ -141,14 +116,11 @@ const DEBUG_CONFIG = {
     showPerformance: false      // パフォーマンス表示
 };
 
-// 言語設定（将来の拡張用）
-const LANGUAGE_CONFIG = {};
 
 // ========================================================================================
 // 統合設定オブジェクト
 // ========================================================================================
 const APP_CONFIG = {
-    GEMINI_MODELS,
     SPEECH_CONFIG,
     UI_CONFIG,
     API_CONFIG,
@@ -161,5 +133,4 @@ const APP_CONFIG = {
 // グローバル公開
 // ========================================================================================
 window.APP_CONFIG = APP_CONFIG;
-window.LANGUAGE_CONFIG = LANGUAGE_CONFIG;
 window.DEBUG_CONFIG = DEBUG_CONFIG;
