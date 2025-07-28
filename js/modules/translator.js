@@ -320,20 +320,32 @@ ${text}`;
 
             const candidate = response.candidates[0];
             
+            // Gemini API finishReasonのチェック（STOP以外は異常終了）
+            if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+                throw new Error(`finishReason: ${candidate.finishReason}`);
+            }
+            
             if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
-                throw new Error('翻訳結果が含まれていません');
+                throw new Error('API_RESPONSE_NO_CONTENT');
             }
 
             const translatedText = candidate.content.parts[0].text;
             
             if (!translatedText || typeof translatedText !== 'string') {
-                throw new Error('翻訳テキストが無効です');
+                throw new Error('API_RESPONSE_INVALID_TEXT');
             }
 
             return translatedText.trim();
 
         } catch (error) {
-            throw new Error('翻訳結果の処理に失敗しました');
+            // エラータイプに応じて適切なメッセージを生成
+            if (error.message === 'API_RESPONSE_NO_CONTENT') {
+                throw new Error('翻訳結果が含まれていません');
+            } else if (error.message === 'API_RESPONSE_INVALID_TEXT') {
+                throw new Error('翻訳テキストが無効です');
+            } else {
+                throw new Error(`翻訳に失敗しました。${error.message}`);
+            }
         }
     }
 

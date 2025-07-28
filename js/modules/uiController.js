@@ -708,7 +708,7 @@ class UIController {
             } else {
                 // 翻訳失敗 - ピンク色設定
                 const errorIcon = '❌';
-                const errorMessage = this.getSimpleErrorMessage(result.error);
+                const errorMessage = result.error || '翻訳に失敗しました';
                 $panelElement.html(`<span class="error-text">${errorIcon} ${errorMessage}</span>`);
                 $panelElement.attr('data-panel-state', 'error');
                 $panelElement.attr('data-error-detail', result.error);
@@ -720,7 +720,7 @@ class UIController {
             
         } catch (error) {
             const errorIcon = '❌';
-            const errorMessage = this.getSimpleErrorMessage(error.message);
+            const errorMessage = error.message || '翻訳に失敗しました';
             $panelElement.html(`<span class="error-text">${errorIcon} ${errorMessage}</span>`);
             $panelElement.attr('data-panel-state', 'error');
             $panelElement.attr('data-error-detail', error.message);
@@ -789,35 +789,6 @@ class UIController {
         }
     }
 
-    /**
-     * 翻訳エラーメッセージのユーザーフレンドリーな簡略化
-     * 技術的なエラーメッセージを一般ユーザーにも理解しやすい形に変換
-     * APIキーエラー、レート制限、ネットワークエラーなどを適切に分類
-     * 
-     * @param {string} errorMessage - 元のエラーメッセージ
-     * @returns {string} 簡略化されたユーザーフレンドリーなメッセージ
-     */
-    getSimpleErrorMessage(errorMessage) {
-        if (!errorMessage) return '翻訳に失敗しました';
-        
-        const lowerMessage = errorMessage.toLowerCase();
-        
-        if (lowerMessage.includes('api key') || lowerMessage.includes('apiキー')) {
-            return 'APIキーが未設定です';
-        } else if (lowerMessage.includes('quota') || lowerMessage.includes('rate limit')) {
-            return '利用制限に達しました';
-        } else if (lowerMessage.includes('network') || lowerMessage.includes('ネットワーク')) {
-            return 'ネットワークエラー';
-        } else if (lowerMessage.includes('timeout') || lowerMessage.includes('タイムアウト')) {
-            return 'タイムアウトしました';
-        } else if (lowerMessage.includes('text too long') || lowerMessage.includes('長すぎ')) {
-            return 'テキストが長すぎます';
-        } else if (lowerMessage.includes('見つかりません') || lowerMessage.includes('not found')) {
-            return 'テキストが見つかりません';
-        } else {
-            return '翻訳に失敗しました';
-        }
-    }
 
     /**
      * テキストパネルを原文+ピンイン表示に戻す
