@@ -272,10 +272,6 @@ class SpeechRecognitionManager {
                 this.processedTexts.delete(trimmedText);
             }, this.config.duplicateCheckTimeout);
             
-            // 音声認識結果に含まれる可能性のあるピンインを除去
-            // 例：「我wǒ说shuō中zhōng文wén」→「我说中文」
-            trimmedText = this.cleanPinyinFromText(trimmedText);
-            
             // ピンイン変換
             let rubyText = trimmedText;
             if (this.pinyinConverter) {
@@ -704,22 +700,6 @@ class SpeechRecognitionManager {
         }
     }
 
-    /**
-     * 音声認識結果からピンイン文字を除去
-     * 音声認識エンジンが誤ってピンインを含めて認識した場合の対処
-     * 声調記号付きラテン文字（ā, é, ǐ など）を除去して純粋な中国語テキストを抽出
-     * 
-     * @param {string} text - ピンインが混入している可能性のあるテキスト
-     * @returns {string} ピンインを除去したクリーンなテキスト
-     * 
-     * @example
-     * cleanPinyinFromText('我wǒ所suǒ谓wèi') // => '我所谓'
-     */
-    cleanPinyinFromText(text) {
-        // ピンイン（声調記号付きのラテン文字）を除去
-        // 例：「我wǒ所suǒ谓wèi」→「我所谓」
-        return text.replace(/[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+/gi, '');
-    }
 }
 
 // グローバルインスタンス

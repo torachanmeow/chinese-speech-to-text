@@ -27,6 +27,31 @@ class UIController {
         
         // パフォーマンス最適化用のマップ（各イベントに個別のタイマー管理）
         this.debounceMap = new Map();   // デバウンス処理用
+        
+        // 選択テキスト抽出時に除外する要素のセレクター
+        this.EXCLUDE_SELECTORS = [
+            'rt',                                    // ピンイン（rubyタグ内）
+            '.text-muted',                           // 時刻表示・ラベル
+            'small',                                 // 時刻表示要素
+            '.timestamp',                            // その他の時刻表示
+            '.toggle-area',                          // 翻訳切り替えエリア
+            '.toggle-icon',                          // 翻訳切り替えアイコン
+            '.translation-content',                  // 翻訳エリア全体
+            '.translation-text-content',             // 翻訳テキスト
+            '.selected-text',                       // 選択済みテキスト表示
+            '.translated-text',                     // 翻訳済みテキスト
+            '.translation-loading',                 // 翻訳ローディング
+            '.translation-error',                   // 翻訳エラー
+            '.translation-placeholder',             // 翻訳プレースホルダー
+            '[data-translation-item]',              // 翻訳アイテム全体
+            '[data-translation-item="original"]',    // 原文エリア
+            '[data-translation-item="translated"]', // 翻訳エリア
+            'footer',                               // フッター全体
+            '.btn',                                 // ボタン要素
+            '.badge',                               // バッジ要素
+            '.alert',                               // アラート要素
+            'button'                                // ボタン要素（汎用）
+        ];
         this.throttleMap = new Map();   // スロットル処理用
         
         // 自動スクロールの状態管理
@@ -524,7 +549,7 @@ class UIController {
     handleTextSelection() {
         try {
             const selection = window.getSelection();
-            let selectedText = selection.toString().trim();
+            let selectedText = this.extractTextWithoutPinyin(selection);
             
             if (!selectedText) {
                 return;
@@ -850,27 +875,91 @@ class UIController {
      * @returns {string} クリーニングされたテキスト
      */
     cleanSelectedText(text) {
-        // undefinedやnullの場合は空文字を返す
         if (!text || typeof text !== 'string') {
             return '';
         }
         
-        // 時刻パターンを除去
-        text = text
-            .replace(/\d{1,2}:\d{2}(:\d{2})?/g, '') // 14:10:20形式
-            .replace(/\d{4}\/\d{1,2}\/\d{1,2}/g, '') // 日付形式
-            .replace(/午前|午後/g, ''); // 午前/午後
+        return text
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
-        // ピンインパターンを強化（より広範囲に対応）
-        text = text
-            .replace(/\s+[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+/gi, '') // スペース+ピンイン
-            .replace(/[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+\s*/gi, '') // ピンイン+スペース（任意）
-            .replace(/[a-zA-Z]+/g, ''); // 残った英字も除去
+    /**
+     * 選択範囲から不要要素を除外してテキストを抽出
+     * ピンイン、翻訳エリア、時刻表示、UI要素を除外し、中国語文字のみを取得
+     * 
+     * @param {Selection} selection - window.getSelection()で取得した選択範囲
+     * @returns {string} クリーンなテキスト
+     */
+    extractTextWithoutPinyin(selection) {
+        if (!selection?.rangeCount) {
+            return '';
+        }
+
+        try {
+            let extractedText = '';
+            
+            for (let i = 0; i < selection.rangeCount; i++) {
+                const range = selection.getRangeAt(i);
+                
+                if (!this.isValidTextRange(range)) {
+                    continue;
+                }
+                
+                const clonedRange = range.cloneContents();
+                this.removeExcludedElements(clonedRange);
+                extractedText += clonedRange.textContent || '';
+            }
+            
+            return extractedText.trim();
+            
+        } catch (error) {
+            return selection.toString().trim();
+        }
+    }
+
+    /**
+     * 選択範囲がメインテキストエリア内の有効な範囲かチェック
+     * @param {Range} range - チェック対象の範囲
+     * @returns {boolean} 有効な範囲かどうか
+     */
+    isValidTextRange(range) {
+        // メインテキストエリア内かチェック
+        const mainTextArea = document.getElementById('main-text');
+        const startContainer = range.startContainer;
+        const endContainer = range.endContainer;
         
-        // 余分なスペースを除去
-        text = text.replace(/\s+/g, '').trim();
+        const isInMainArea = mainTextArea && (
+            mainTextArea.contains(startContainer) || startContainer === mainTextArea
+        ) && (
+            mainTextArea.contains(endContainer) || endContainer === mainTextArea
+        );
         
-        return text;
+        if (!isInMainArea) {
+            return false;
+        }
+        
+        // 翻訳関連要素が含まれているかチェック
+        const parentElement = range.commonAncestorContainer.nodeType === Node.TEXT_NODE 
+            ? range.commonAncestorContainer.parentElement 
+            : range.commonAncestorContainer;
+        
+        return !(parentElement && (
+            parentElement.closest('.translation-content') ||
+            parentElement.closest('footer') ||
+            parentElement.closest('[data-translation-item]') ||
+            parentElement.closest('.toggle-area')
+        ));
+    }
+
+    /**
+     * 複製された範囲から除外要素を削除
+     * @param {DocumentFragment} clonedRange - 複製された範囲
+     */
+    removeExcludedElements(clonedRange) {
+        this.EXCLUDE_SELECTORS.forEach(selector => {
+            clonedRange.querySelectorAll(selector).forEach(element => element.remove());
+        });
     }
 
     /**
