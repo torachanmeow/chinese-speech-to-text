@@ -10,15 +10,20 @@
 
 // 音声認識システム設定
 const SPEECH_CONFIG = {
+    // 基本設定
     continuous: true,           // 連続認識
     interimResults: true,       // 中間結果表示
     maxAlternatives: 1,         // 代替候補数
-    deadTime: 3000,            // Watchdog判定時間（ms）
-    maxSessionTime: 30000,     // 最大セッション時間（ms）
-    watchdogInterval: 500,      // Watchdog監視間隔（ms）
-    maxErrorCount: 5,          // 最大エラー回数
-    restartDelay: 1000,        // 再起動遅延（ms）
-    duplicateCheckTimeout: 1000 // 重複処理チェック有効時間（ms）
+    
+    // タイムアウト管理
+    deadTime: 5000,            // Watchdog判定時間（ms）
+    maxSessionTime: 60000,     // 最大セッション時間（ms）
+    watchdogInterval: 1000,    // Watchdog監視間隔（ms）
+    
+    // エラー処理
+    maxErrorCount: 10,         // 最大エラー回数
+    restartDelay: 100,         // 再起動遅延（ms）
+    duplicateCheckTimeout: 1500 // 重複処理チェック時間（ms）
 };
 
 // UIシステム設定

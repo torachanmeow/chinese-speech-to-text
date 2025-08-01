@@ -98,8 +98,7 @@ class SpeechRecognitionManager {
         
         // 言語設定
         const language = stateManager.getState('config.language') || 'zh-CN';
-        const speechLang = language;
-        this.recognition.lang = speechLang;
+        this.recognition.lang = language;
     }
 
     /**
@@ -510,13 +509,12 @@ class SpeechRecognitionManager {
             // 状態を確実にリセット
             this.resetInternalState();
             
-            // 少し待ってから開始（前の認識が完全に終了するまで）
+            // 前の認識が完全に終了するまで待機
             setTimeout(() => {
                 try {
                     // 言語設定を更新
                     const language = stateManager.getState('config.language') || 'zh-CN';
-                    const speechLang = language;
-                    this.recognition.lang = speechLang;
+                    this.recognition.lang = language;
                     
                     this.recognition.start();
                 } catch (error) {
@@ -524,7 +522,7 @@ class SpeechRecognitionManager {
                     this.resetInternalState();
                     stateManager.setError('SPEECH_RECOGNITION', 'ABORTED', error.message);
                 }
-            }, 100);
+            }, this.config.restartDelay);
             
             return true;
             
@@ -598,8 +596,7 @@ class SpeechRecognitionManager {
                 
                 // 言語設定を更新
                 if (this.recognition) {
-                    const speechLang = currentLanguage;
-                    this.recognition.lang = speechLang;
+                    this.recognition.lang = currentLanguage;
                 }
                 
                 // 再開
@@ -635,8 +632,7 @@ class SpeechRecognitionManager {
             
             // 言語設定更新
             if (this.recognition) {
-                const speechLang = language;
-                this.recognition.lang = speechLang;
+                this.recognition.lang = language;
             }
             
             // 必要に応じて再開
