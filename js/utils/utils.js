@@ -112,13 +112,13 @@ const Utils = {
         }
     },
     
-    // 中国語文字判定
-    isChinese(char) {
-        return /[\u4e00-\u9fff]/.test(char);
+    // 中国語テキスト判定
+    isChineseText(text) {
+        return /[\u4e00-\u9fff]/.test(text);
     },
     
-    // 文字列トリミング（中国語対応）
-    trimChinese(text) {
+    // 文字列トリミング
+    trimText(text) {
         return text.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
     }
 };

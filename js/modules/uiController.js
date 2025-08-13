@@ -618,8 +618,7 @@ class UIController {
             }
             
             // 中国語文字が含まれているかチェック
-            const hasChinese = /[\u4e00-\u9fff]/.test(selectedText);
-            if (!hasChinese) {
+            if (!Utils.isChineseText(selectedText)) {
                 return;
             }
             
@@ -757,7 +756,7 @@ class UIController {
                 throw new Error('有効なテキストが指定されていません');
             }
 
-            const trimmedText = Utils.trimChinese(text);
+            const trimmedText = Utils.trimText(text);
             if (!trimmedText) {
                 throw new Error('翻訳するテキストが空です');
             }
@@ -1009,7 +1008,7 @@ class UIController {
         // クリックされた原文テキストを取得
         const originalText = $(e.target).text().trim();
         
-        if (originalText && /[\u4e00-\u9fff]/.test(originalText)) {
+        if (originalText && Utils.isChineseText(originalText)) {
             // 中国語が含まれている場合のみ翻訳入力欄にコピー
             this.copyToTranslationInput(originalText);
         }

@@ -257,7 +257,7 @@ class SpeechRecognitionManager {
      */
     async processFinalResult(text) {
         try {
-            let trimmedText = Utils.trimChinese(text);
+            let trimmedText = Utils.trimText(text);
             if (!trimmedText) return;
             
             // 重複処理チェック：同じテキストを短時間で複数回処理しない

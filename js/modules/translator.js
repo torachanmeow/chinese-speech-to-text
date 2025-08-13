@@ -105,7 +105,7 @@ class GeminiTranslator {
                 throw new Error('有効なテキストが指定されていません');
             }
 
-            const trimmedText = Utils.trimChinese(text);
+            const trimmedText = Utils.trimText(text);
             if (!trimmedText) {
                 throw new Error('翻訳するテキストが空です');
             }

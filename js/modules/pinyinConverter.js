@@ -88,7 +88,7 @@ class PinyinConverter {
         const rubyParts = [];
         
         for (const char of chars) {
-            if (Utils.isChinese(char)) {
+            if (Utils.isChineseText(char)) {
                 // 中国語文字の場合はピンインを取得してrubyタグで囲む
                 const pinyin = await this.getSingleCharPinyin(char);
                 if (pinyin && pinyin !== char) {
@@ -112,7 +112,7 @@ class PinyinConverter {
      */
     async getSingleCharPinyin(char) {
         try {
-            if (!this.isLibraryLoaded || !Utils.isChinese(char)) {
+            if (!this.isLibraryLoaded || !Utils.isChineseText(char)) {
                 return char;
             }
             
@@ -219,7 +219,7 @@ class PinyinConverter {
      */
     getMultiplePinyin(char) {
         try {
-            if (!this.isLibraryLoaded || !Utils.isChinese(char)) {
+            if (!this.isLibraryLoaded || !Utils.isChineseText(char)) {
                 return [];
             }
             
