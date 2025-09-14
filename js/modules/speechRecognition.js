@@ -332,8 +332,8 @@ class SpeechRecognitionManager {
             return;
         }
         
-        // 自動再起動を試行（特定のエラーの場合）
-        if (this.shouldAutoRestart(event.error)) {
+        // 自動再起動を試行（特定のエラーの場合、またはエラーコードが不明な場合）
+        if (this.shouldAutoRestart(event.error) || !event.error) {
             setTimeout(() => {
                 this.safeRestart();
             }, this.config.restartDelay);
@@ -369,8 +369,9 @@ class SpeechRecognitionManager {
      * @returns {boolean} 再起動可否
      */
     shouldAutoRestart(error) {
-        const restartableErrors = ['no-speech', 'aborted', 'audio-capture'];
-        return restartableErrors.includes(error);
+        const restartableErrors = ['no-speech', 'aborted', 'audio-capture', 'timeout'];
+        // エラーコードが未定義の場合も再起動対象とする
+        return !error || restartableErrors.includes(error);
     }
 
     /**
