@@ -199,23 +199,16 @@ class GeminiTranslator {
         // 翻訳スタイル設定を取得
         const translationStyle = stateManager.getState('config.translationStyle') || '';
 
-        // プロンプト生成
-        const prompt = `あなたは${sourceLanguage}から${targetLanguage}への翻訳を専門とする熟練の翻訳者です。
-
-以下の${sourceLanguage}のテキストを自然で正確な${targetLanguage}に翻訳してください。
-
-翻訳時の注意点:
-1. 文脈と意味を正確に理解して翻訳する
-2. 自然で読みやすい${targetLanguage}表現を使用する
-3. 専門用語や固有名詞は適切に処理する
-4. 文化的なニュアンスも考慮する
-5. 翻訳結果のみを返答し、説明は不要
-${translationStyle ? `6. スタイル指示: ${translationStyle}` : ''}
-
-翻訳するテキスト:
+        // プロンプト生成 
+        const prompt = `以下のテキストを${sourceLanguage}から${targetLanguage}に翻訳してください。
+重要な指示:
+- 翻訳結果のみを出力すること
+- 説明、前置き、確認メッセージなどは一切含めないこと
+- メタ情報や翻訳プロセスの説明は不要
+- 原文の意味を正確に、自然な${targetLanguage}で表現すること
+${translationStyle ? `- スタイル: ${translationStyle}` : ''}
+翻訳対象テキスト:
 ${text}`;
-
-
         return prompt;
     }
 
